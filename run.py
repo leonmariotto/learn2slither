@@ -18,6 +18,10 @@ if __name__ == "__main__":
             snake.poll_input()
             snake.move()
             last_move = now
+            reward = snake.get_reward()
+            state = snake.get_state()
+            print(f"reward = {reward}")
+            print(f"state = {state}")
         if (now - last_render >= 1 / 60):
             snake.draw()
             last_render = now

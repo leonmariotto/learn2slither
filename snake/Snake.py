@@ -7,7 +7,7 @@ import sys
 import random
 
 # --- Game configuration ---
-GRID_WIDTH, GRID_HEIGHT = 20, 20
+GRID_WIDTH, GRID_HEIGHT = 10, 10
 
 # --- Rendering configuration ---
 CELL_SIZE = 25
@@ -186,13 +186,54 @@ class Snake():
             self.reward = -20
             return 
 
+    def set_direction(self, direction:str):
+        if direction == "UP" and self.direction != (0, 1):
+            self.direction = (0, -1)
+        elif direction == "DOWN" and self.direction != (0, -1):
+            self.direction = (0, 1)
+        elif direction == "LEFT" and self.direction != (1, 0):
+            self.direction = (-1, 0)
+        elif direction == "RIGHT" and self.direction != (-1, 0):
+            self.direction = (1, 0)
 
     def get_state(self):
         """
         Get the snake vision: only column and row of snake head.
         """
+        out = []
+        head_x, head_y = self.snake[0]
+        out += ["W"]
+        for i in range(GRID_WIDTH):
+            if (i, head_y) == self.snake[0]:
+                out += ["H"]
+            elif (i, head_y) in self.snake:
+                out += ["S"]
+            elif (i, head_y) in self.red_apple:
+                out += ["R"]
+            elif (i, head_y) in self.green_apple:
+                out += ["R"]
+            else:
+                out += [" "]
+        out += ["W"]
+        out += ["W"]
+        for i in range(GRID_HEIGHT):
+            if (head_x, i) == self.snake[0]:
+                out += ["H"]
+            elif (head_x, i) in self.snake:
+                out += ["S"]
+            elif (head_x, i) in self.red_apple:
+                out += ["R"]
+            elif (head_x, i) in self.green_apple:
+                out += ["R"]
+            else:
+                out += [" "]
+        out += ["W"]
+        return out
+
+
 
     def get_reward(self):
         """
         Get the current reward: (calculated from last move)
         """
+        return self.reward
