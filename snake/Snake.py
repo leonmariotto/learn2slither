@@ -132,8 +132,16 @@ class Snake():
 
         # Check bounds
         if not (0 <= new_head[0] < GRID_WIDTH and 0 <= new_head[1] < GRID_HEIGHT):
+            # LOOSE
             pygame.quit()
             sys.exit()
+
+        # Check collision with snake
+        if new_head in self.snake:
+            # LOOSE
+            pygame.quit()
+            sys.exit()
+
         # Move snake
         self.snake.insert(0, new_head)
         if new_head == self.food:
