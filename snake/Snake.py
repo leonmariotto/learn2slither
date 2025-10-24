@@ -1,13 +1,17 @@
+"""
+Snake engine.
+"""
 
 import pygame
 import sys
 import random
 
 # --- Game configuration ---
-CELL_SIZE = 25
 GRID_WIDTH, GRID_HEIGHT = 20, 20
-SCREEN_WIDTH, SCREEN_HEIGHT = CELL_SIZE * GRID_WIDTH, CELL_SIZE * GRID_HEIGHT
 
+# --- Rendering configuration ---
+CELL_SIZE = 25
+SCREEN_WIDTH, SCREEN_HEIGHT = CELL_SIZE * GRID_WIDTH, CELL_SIZE * GRID_HEIGHT
 
 # Colors
 COLORS = {
@@ -20,11 +24,13 @@ COLORS = {
 DIR_NAME = {(0,-1):"UP",(0,1):"DOWN",(-1,0):"LEFT",(1,0):"RIGHT"}
 
 class Snake():
-    def __init__(self):
+    def __init__(self, render:bool=False):
         # --- Initialize pygame ---
-        pygame.init()
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Learn2Slither")
+        self.render = render
+        if self.render is True:
+            pygame.init()
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+            pygame.display.set_caption("Learn2Slither")
         # --- Game state ---
         self.snake = [(5, 5), (4, 5), (3, 5)]
         self.direction = (1, 0)
@@ -39,6 +45,8 @@ class Snake():
 
     def draw_grid(self):
         """Draw subtle grid lines."""
+        if self.render is False:
+            raise ValueError();
         for x in range(0, SCREEN_WIDTH, CELL_SIZE):
             pygame.draw.line(self.screen, COLORS["grid"], (x, 0), (x, SCREEN_HEIGHT))
         for y in range(0, SCREEN_HEIGHT, CELL_SIZE):
@@ -57,10 +65,14 @@ class Snake():
             points = [(0, c), (CELL_SIZE, 0), (CELL_SIZE, CELL_SIZE)]
         elif direction == "RIGHT":
             points = [(0, 0), (CELL_SIZE, c), (0, CELL_SIZE)]
+        else:
+            raise ValueError()
         pygame.draw.polygon(surf, color, points)
         return surf
 
     def draw_snake(self):
+        if self.render is False:
+            raise ValueError();
         for i,(x,y) in enumerate(self.snake):
             rect = pygame.Rect(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE, CELL_SIZE)
             if i == 0:
@@ -73,6 +85,8 @@ class Snake():
                 pygame.draw.rect(self.screen, (0,100,0), rect, width=2, border_radius=4)
 
     def draw(self):
+        if self.render is False:
+            raise ValueError();
         """Draw the entire board based on known cell states."""
         self.screen.fill(COLORS["background"])
         self.draw_grid()
@@ -88,6 +102,13 @@ class Snake():
         pygame.display.flip()
 
     def poll_input(self):
+        """
+        Note that direction can be controlled with arrow.
+        Snake shall provide other method to control the snake
+        when no UI is present.
+        """
+        if self.render is False:
+            raise ValueError();
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
