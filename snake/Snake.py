@@ -5,6 +5,7 @@ Snake engine.
 import pygame
 import sys
 import random
+from enum import IntEnum
 
 # --- Game configuration ---
 GRID_WIDTH, GRID_HEIGHT = 10, 10
@@ -12,6 +13,11 @@ GRID_WIDTH, GRID_HEIGHT = 10, 10
 # --- Rendering configuration ---
 CELL_SIZE = 25
 SCREEN_WIDTH, SCREEN_HEIGHT = CELL_SIZE * GRID_WIDTH, CELL_SIZE * GRID_HEIGHT
+
+DEATH_REWARD = -100
+RED_APPLE_REWARD = -5
+GREEN_APPLE_REWARD = +80
+NOTHING_HAPPEN_REWARD = -1
 
 # Colors
 COLORS = {
@@ -23,6 +29,14 @@ COLORS = {
 }
 
 DIR_NAME = {(0,-1):"UP",(0,1):"DOWN",(-1,0):"LEFT",(1,0):"RIGHT"}
+
+class SnakeStates(IntEnum):
+    HEAD = 0
+    SNAKE = 1
+    RED_APPLE = 2
+    GREEN_APPLE = 3
+    NOTHING = 4
+    WALL = 5
 
 class Snake():
     """
@@ -44,14 +58,18 @@ class Snake():
         # --- Game state ---
         self.snake = [(5, 5), (4, 5), (3, 5)]
         self.direction = (1, 0)
-        self.green_apple = [(5, 8), (8,5)]
-        self.red_apple = [(8,8)]
+        self.green_apple = []
+        self.red_apple = []
+        self.green_apple += [self.get_free_case()]
+        self.green_apple += [self.get_free_case()]
+        self.red_apple += [self.get_free_case()]
         self.head_textures = {
             "UP": Snake.make_head_texture("UP"),
             "DOWN": Snake.make_head_texture("DOWN"),
             "LEFT": Snake.make_head_texture("LEFT"),
             "RIGHT": Snake.make_head_texture("RIGHT"),
         }
+        self.reward = 0
         # print(f"in reset: {self.__dict__}")
 
     def draw_grid(self):
@@ -147,20 +165,18 @@ class Snake():
 
 
     def move(self):
-
-        # print(f"in move {self.__dict__}\n")
         # Update snake
         head_x, head_y = self.snake[0]
         new_head = (head_x + self.direction[0], head_y + self.direction[1])
 
         # Default reward
-        self.reward = -1
+        self.reward = NOTHING_HAPPEN_REWARD
 
         # Check bounds
         if (not (0 <= new_head[0] < GRID_WIDTH and 0 <= new_head[1] < GRID_HEIGHT)) or new_head in self.snake:
             # LOOSE
             self.reset()
-            self.reward = -20
+            self.reward = DEATH_REWARD
             return 
 
         # Move snake
@@ -168,12 +184,12 @@ class Snake():
         self.snake.insert(0, new_head)
         for i,apple in enumerate(self.red_apple):
             if new_head == apple :
-                self.reward = -5
+                self.reward = RED_APPLE_REWARD
                 self.red_apple[i] = self.get_free_case()
                 self.snake.pop()
         for i,apple in enumerate(self.green_apple):
             if new_head == apple :
-                self.reward = 5
+                self.reward = GREEN_APPLE_REWARD
                 self.green_apple[i] = self.get_free_case()
                 increase_snake = True
 
@@ -183,7 +199,7 @@ class Snake():
         if (len(self.snake) == 0):
             # LOOSE
             self.reset()
-            self.reward = -20
+            self.reward = DEATH_REWARD
             return 
 
     def set_direction(self, direction:str):
@@ -202,32 +218,32 @@ class Snake():
         """
         out = []
         head_x, head_y = self.snake[0]
-        out += ["W"]
+        out += [SnakeStates.WALL]
         for i in range(GRID_WIDTH):
             if (i, head_y) == self.snake[0]:
-                out += ["H"]
+                out += [SnakeStates.HEAD]
             elif (i, head_y) in self.snake:
-                out += ["S"]
+                out += [SnakeStates.SNAKE]
             elif (i, head_y) in self.red_apple:
-                out += ["R"]
+                out += [SnakeStates.RED_APPLE]
             elif (i, head_y) in self.green_apple:
-                out += ["R"]
+                out += [SnakeStates.GREEN_APPLE]
             else:
-                out += [" "]
-        out += ["W"]
-        out += ["W"]
+                out += [SnakeStates.NOTHING]
+        out += [SnakeStates.WALL]
+        out += [SnakeStates.WALL]
         for i in range(GRID_HEIGHT):
             if (head_x, i) == self.snake[0]:
-                out += ["H"]
+                out += [SnakeStates.HEAD]
             elif (head_x, i) in self.snake:
-                out += ["S"]
+                out += [SnakeStates.SNAKE]
             elif (head_x, i) in self.red_apple:
-                out += ["R"]
+                out += [SnakeStates.RED_APPLE]
             elif (head_x, i) in self.green_apple:
-                out += ["R"]
+                out += [SnakeStates.GREEN_APPLE]
             else:
-                out += [" "]
-        out += ["W"]
+                out += [SnakeStates.NOTHING]
+        out += [SnakeStates.WALL]
         return out
 
 
