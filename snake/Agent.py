@@ -7,6 +7,7 @@ from .Snake import Snake
 import numpy as np
 import random
 from matplotlib import pyplot as plt
+import collections
 
 NN_L1 = 24
 NN_L2 = 150
@@ -25,10 +26,28 @@ ACTION_SET = {
 EPSILON_INIT = 1.0
 EPSILON_MIN = 0.05
 
+
+class ReplayBuffer:
+    def __init__(self, capacity):
+        self.buffer = collections.deque(maxlen=capacity)
+
+    def add(self, state, action, reward, next_state, done):
+        self.buffer.append((state, action, reward, next_state, done))
+
+    def sample(self, batch_size):
+        return random.sample(self.buffer, batch_size)
+
+    def __len__(self):
+        return len(self.buffer)
+
+
 class Agent():
     # Say that 300 step is an epoch
     # 300 step is sufficient to reach a 10-case long snake.
     STEP_PER_EPOCHS = 300
+    REPLAY_BUFFER_SIZE = 10000
+    BATCH_SIZE = 64
+    TARGET_UPDATE_FREQUENCY = 10 # in epochs
 
     def __init__(self):
         self.model = torch.nn.Sequential(
@@ -38,8 +57,17 @@ class Agent():
             torch.nn.ReLU(),
             torch.nn.Linear(NN_L3, NN_L4)
         )
+        self.target_model = torch.nn.Sequential(
+            torch.nn.Linear(NN_L1, NN_L2),
+            torch.nn.ReLU(),
+            torch.nn.Linear(NN_L2, NN_L3),
+            torch.nn.ReLU(),
+            torch.nn.Linear(NN_L3, NN_L4)
+        )
+        self.target_model.load_state_dict(self.model.state_dict())
         self.loss_fn = torch.nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
+        self.replay_buffer = ReplayBuffer(self.REPLAY_BUFFER_SIZE)
         self.losses = []
         self.epsilon = EPSILON_INIT
         self.internal_step_counter = 0
@@ -73,21 +101,33 @@ class Agent():
         snake.move()
         reward = snake.get_reward()
         self.epoch_cumuled_reward += reward
-        # Y = torch.Tensor([reward]).detach()
-
-        state2_ = np.array(snake.get_state()).astype(float) + np.random.rand(1,NN_L1)/100.0
+        state2_ = np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
         state2 = torch.from_numpy(state2_).float()
-        with torch.no_grad():
-            newQ = self.model(state2)
-            #newQ = model(state2.reshape(1,64))
-        maxQ = torch.max(newQ) #M
-        Y = torch.tensor(reward + (GAMMA * maxQ), dtype=torch.float32)
-        X = qval.squeeze()[action_]
-        loss = self.loss_fn(X, Y)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.losses.append(loss.item())
-        self.optimizer.step()
+        done = reward == -100  # Assuming DEATH_REWARD is -100
+        self.replay_buffer.add(state, action_, reward, state2, done)
+
+        if len(self.replay_buffer) > self.BATCH_SIZE:
+            minibatch = self.replay_buffer.sample(self.BATCH_SIZE)
+            state_batch, action_batch, reward_batch, next_state_batch, done_batch = zip(*minibatch)
+
+            state_batch = torch.cat(state_batch)
+            action_batch = torch.Tensor(action_batch)
+            reward_batch = torch.Tensor(reward_batch)
+            next_state_batch = torch.cat(next_state_batch)
+            done_batch = torch.Tensor(done_batch)
+
+            Q_values = self.model(state_batch)
+            with torch.no_grad():
+                next_Q_values = self.target_model(next_state_batch)
+
+            Q_target = reward_batch + GAMMA * torch.max(next_Q_values, dim=1).values * (1 - done_batch)
+
+            loss = self.loss_fn(Q_values.gather(1, action_batch.long().unsqueeze(1)).squeeze(), Q_target)
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.losses.append(loss.item())
+            self.optimizer.step()
+
         if self.internal_step_counter > self.STEP_PER_EPOCHS:
             # Terminate an epoch and start another
             self.cumuled_rewards += [self.epoch_cumuled_reward]
@@ -97,6 +137,8 @@ class Agent():
             self.epsilon = max(EPSILON_MIN, self.epsilon * 0.99)
             self.epsilons += [self.epsilon]
             self.epoch_counter += 1
+            if self.epoch_counter % self.TARGET_UPDATE_FREQUENCY == 0:
+                self.target_model.load_state_dict(self.model.state_dict())
             snake.reset()
 
     def plot_losses(self):
