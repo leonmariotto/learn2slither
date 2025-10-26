@@ -36,6 +36,13 @@ REPLAY_BUFFER_SIZE = 6000
 # means smoother gradient but slow updates (so slow the training process).
 BATCH_SIZE = 600
 
+# Say that 300 step is an epoch
+# 300 step is sufficient to reach a 10-case long snake.
+# Tis define the epsilon update frequency, metrics collecting frequency,
+# and is part of target update frequency.
+# Also currently there is a reset of the game every epoch... TODO is it necessary/authorized/usefull ?
+STEP_PER_EPOCHS = 300
+
 TARGET_UPDATE_FREQUENCY = 3 # in epochs
 
 ACTION_SET = {
@@ -47,6 +54,10 @@ ACTION_SET = {
 
 EPSILON_INIT = 1.0
 EPSILON_MIN = 0.1
+# At each epoch epsilon is computed as: is new_epsilon = a * epsilon + b
+# But can't go under EPSILON_MIN.
+EPSILON_A = 0.99
+EPSILON_B = 0
 
 class ReplayBuffer:
     """
@@ -87,12 +98,8 @@ class Agent():
     Use replay buffer.
     Use a target network different from main network, with a defined synchronization rate.
     """
-    # Say that 300 step is an epoch
-    # 300 step is sufficient to reach a 10-case long snake.
-    STEP_PER_EPOCHS = 300
-
     def __init__(self):
-        # The main model is used to make decision.
+        # The main model is updated at each step.
         # The state is inputed to the model, a prediction of reward-action is outputed (Q-value)
         # so we can choose the highest reward-action of the Q-value.
         self.model = torch.nn.Sequential(
@@ -102,11 +109,12 @@ class Agent():
             torch.nn.ReLU(),
             torch.nn.Linear(NN_L3, NN_L4)
         )
-        # This model is updated every step but not used to make decision.
-        # At a defined synchonization rate (meta-parameter) the target network is
-        # synchronized to main network.
+        # This model is updated at a defined synchonization rate (meta-parameter)
+        # where it is synchronized to main network.
+        # So this network is more stable than main network.
         # This is needed to reduce learning instability, although the synchronization
         # rate should be chosen carefully.
+        # This network is only used to compute future reward (γ * max(Q_target(S₄))) in Bellman equation.
         self.target_model = torch.nn.Sequential(
             torch.nn.Linear(NN_L1, NN_L2),
             torch.nn.ReLU(),
@@ -160,7 +168,7 @@ class Agent():
         # Because we take into account next states, the "done" state is special, as there is no
         # next state to take into account.
         # The "done_batch" value is used to transform to 0 the GAMMA part.
-        done = reward == Snake.DEATH_REWARD  # Assuming DEATH_REWARD is -100
+        done = reward == Snake.DEATH_REWARD
         self.replay_buffer.add(state, action_, reward, state2, done)
 
         if len(self.replay_buffer) > BATCH_SIZE:
@@ -175,6 +183,7 @@ class Agent():
 
             Q_values = self.model(state_batch)
             with torch.no_grad():
+                # Use target model to predict future Q values.
                 next_Q_values = self.target_model(next_state_batch)
             Q_target = reward_batch + GAMMA * torch.max(next_Q_values, dim=1).values * (1 - done_batch)
 
@@ -186,14 +195,14 @@ class Agent():
             # Once gradient are computed optimizer update weight, with respect to the learning weigth.
             self.optimizer.step()
 
-        if self.internal_step_counter > self.STEP_PER_EPOCHS:
+        if self.internal_step_counter > STEP_PER_EPOCHS:
             self.snake_sizes += [len(snake.snake)]
             # Terminate an epoch and start another
             self.cumuled_rewards += [self.epoch_cumuled_reward]
             self.epoch_cumuled_reward = 0
             self.internal_step_counter = 0
             # self.epsilon = max(EPSILON_MIN, self.epsilon - 0.002)
-            self.epsilon = max(EPSILON_MIN, self.epsilon * 0.99)
+            self.epsilon = max(EPSILON_MIN, self.epsilon * EPSILON_A + EPSILON_B)
             self.epsilons += [self.epsilon]
             self.epoch_counter += 1
             if self.epoch_counter % TARGET_UPDATE_FREQUENCY == 0:
@@ -208,7 +217,7 @@ class Agent():
         axs[0].set_ylabel("Loss", fontsize=16)
         axs[0].plot(self.losses)
         axs[1].set_title("Rewards", fontsize=22)
-        axs[1].set_xlabel(f"Epoch ({self.STEP_PER_EPOCHS} steps)", fontsize=16)
+        axs[1].set_xlabel(f"Epoch ({STEP_PER_EPOCHS} steps)", fontsize=16)
         axs[1].set_ylabel("Reward", fontsize=16)
         axs[1].plot(self.cumuled_rewards)
         axs[2].set_title("Epsilon", fontsize=22)
