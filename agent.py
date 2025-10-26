@@ -2,8 +2,8 @@
 
 import time
 
-from snake.Snake import Snake
-from snake.Agent import Agent
+from learn2slither.Snake import Snake
+from learn2slither.Agent import Agent
 import click
 
 FPS = 60

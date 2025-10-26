@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from snake.Snake import Snake
+from learn2slither.Snake import Snake
 
 import pygame
 import time
@@ -17,7 +17,6 @@ if __name__ == "__main__":
         now = time.perf_counter()
         if (now - last_move >= 1 / MOVE_PER_SECOND):
             counter += 1
-            snake.poll_input()
             snake.move()
             counter += 1
             last_move = now
@@ -28,4 +27,5 @@ if __name__ == "__main__":
             print(f"counter = {counter}")
         if (now - last_render >= 1 / 60):
             snake.draw()
+            snake.poll_input()
             last_render = now
