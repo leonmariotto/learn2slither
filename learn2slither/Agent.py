@@ -9,12 +9,34 @@ import random
 from matplotlib import pyplot as plt
 import collections
 
+
 NN_L1 = 24
 NN_L2 = 150
 NN_L3 = 100
 NN_L4 = 4
+
+# The gradient tells you which way is downhill.
+# The learning rate tells you how big a step you take in that direction.
+# If your steps are too big you stumble around, if too low you crawl forever.
 LEARNING_RATE = 1e-4
+
+# Gamma meta parameter is applied in Bellman equation, it's the future reward discount factor.
+# It determines how much future rewards matter compared to the current one.
+# The model have the ability to think with many-step plan in mind, as (γ * max(Q_target(S₄))) can propagate
+# to a 5 step away reward. But in this case the 5 step away reward will appear discounted by
+# GAMMA ^ 5 => 0.9 ^ 5 => 0.59
+# With a value of 0 only current reward matter, a value of 0.99 focus strongly on future rewards.
 GAMMA = 0.9
+
+# With a large replay buffer, rare transition (eating a green apple) are more used in training.
+# This add more stability to training.
+REPLAY_BUFFER_SIZE = 6000
+
+# Control how many experiences are sampled from the replay buffer for each update. A large value
+# means smoother gradient but slow updates (so slow the training process).
+BATCH_SIZE = 600
+
+TARGET_UPDATE_FREQUENCY = 3 # in epochs
 
 ACTION_SET = {
     0: "UP",
@@ -37,7 +59,7 @@ class ReplayBuffer:
         - action: the action chosen by model or picked random (with respect to epsilon)
         - reward: obtained reward following the chosen action
         - next_state: new state after action.
-        - done: boolean, used to know if new state have to be taken into account. (if snake is dead there is
+        - done: boolean, used to know if future state have to be taken into account. (if snake is dead there is
             no need to take new state into account)
     """
     def __init__(self, capacity):
@@ -59,15 +81,20 @@ class ReplayBuffer:
 class Agent():
     """
     A RL agent that play snake.
+    Use a 2 layers sequential neural network with rectified linear unit as activation function.
+    Use Mean-squared error as activation function.
+    Use Adam optimizer.
+    Use replay buffer.
+    Use a target network different from main network, with a defined synchronization rate.
     """
     # Say that 300 step is an epoch
     # 300 step is sufficient to reach a 10-case long snake.
     STEP_PER_EPOCHS = 300
-    REPLAY_BUFFER_SIZE = 6000
-    BATCH_SIZE = 600
-    TARGET_UPDATE_FREQUENCY = 3 # in epochs
 
     def __init__(self):
+        # The main model is used to make decision.
+        # The state is inputed to the model, a prediction of reward-action is outputed (Q-value)
+        # so we can choose the highest reward-action of the Q-value.
         self.model = torch.nn.Sequential(
             torch.nn.Linear(NN_L1, NN_L2),
             torch.nn.ReLU(),
@@ -75,6 +102,11 @@ class Agent():
             torch.nn.ReLU(),
             torch.nn.Linear(NN_L3, NN_L4)
         )
+        # This model is updated every step but not used to make decision.
+        # At a defined synchonization rate (meta-parameter) the target network is
+        # synchronized to main network.
+        # This is needed to reduce learning instability, although the synchronization
+        # rate should be chosen carefully.
         self.target_model = torch.nn.Sequential(
             torch.nn.Linear(NN_L1, NN_L2),
             torch.nn.ReLU(),
@@ -83,10 +115,13 @@ class Agent():
             torch.nn.Linear(NN_L3, NN_L4)
         )
         self.target_model.load_state_dict(self.model.state_dict())
+        # Mean squared error.
         self.loss_fn = torch.nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
-        self.replay_buffer = ReplayBuffer(self.REPLAY_BUFFER_SIZE)
+        self.replay_buffer = ReplayBuffer(REPLAY_BUFFER_SIZE)
         self.losses = []
+        # Epsilon is used to slowly become deterministic.
+        # The EPSILON_INIT, EPSILON min and epsilon decreasing rate are meta-parameters.
         self.epsilon = EPSILON_INIT
         self.internal_step_counter = 0
         self.epoch_cumuled_reward = 0
@@ -127,8 +162,8 @@ class Agent():
         done = reward == Snake.DEATH_REWARD  # Assuming DEATH_REWARD is -100
         self.replay_buffer.add(state, action_, reward, state2, done)
 
-        if len(self.replay_buffer) > self.BATCH_SIZE:
-            minibatch = self.replay_buffer.sample(self.BATCH_SIZE)
+        if len(self.replay_buffer) > BATCH_SIZE:
+            minibatch = self.replay_buffer.sample(BATCH_SIZE)
             state_batch, action_batch, reward_batch, next_state_batch, done_batch = zip(*minibatch)
 
             state_batch = torch.cat(state_batch)
@@ -144,8 +179,10 @@ class Agent():
 
             loss = self.loss_fn(Q_values.gather(1, action_batch.long().unsqueeze(1)).squeeze(), Q_target)
             self.optimizer.zero_grad()
+            # Perform backpropagation on every gradient of every neuron in every layer of neural network.
             loss.backward()
             self.losses.append(loss.item())
+            # Once gradient are computed optimizer update weight, with respect to the learning weigth.
             self.optimizer.step()
 
         if self.internal_step_counter > self.STEP_PER_EPOCHS:
@@ -157,7 +194,7 @@ class Agent():
             self.epsilon = max(EPSILON_MIN, self.epsilon * 0.99)
             self.epsilons += [self.epsilon]
             self.epoch_counter += 1
-            if self.epoch_counter % self.TARGET_UPDATE_FREQUENCY == 0:
+            if self.epoch_counter % TARGET_UPDATE_FREQUENCY == 0:
                 self.target_model.load_state_dict(self.model.state_dict())
             snake.reset()
 
@@ -191,6 +228,7 @@ class Agent():
         Model must match the nn architecture.
         """
         self.model.load_state_dict(torch.load(filepath))
+        self.target_model.load_state_dict(torch.load(filepath))
 
 
 
