@@ -15,7 +15,7 @@ pip install -r requirements.txt
 
 Run trained model.
 ```
-./agent.py -i v1.weight --play
+./agent.py -i models/v1.weight --play
 ```
 
 If you want to play snake just run `./play_snake.py`.
