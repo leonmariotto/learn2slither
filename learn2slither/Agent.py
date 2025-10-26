@@ -127,6 +127,7 @@ class Agent():
         self.epoch_cumuled_reward = 0
         self.cumuled_rewards = []
         self.epsilons = []
+        self.snake_sizes = []
         self.epoch_counter = 0
 
     def run_best_step(self, snake:Snake):
@@ -186,6 +187,7 @@ class Agent():
             self.optimizer.step()
 
         if self.internal_step_counter > self.STEP_PER_EPOCHS:
+            self.snake_sizes += [len(snake.snake)]
             # Terminate an epoch and start another
             self.cumuled_rewards += [self.epoch_cumuled_reward]
             self.epoch_cumuled_reward = 0
@@ -199,7 +201,7 @@ class Agent():
             snake.reset()
 
     def plot_metrics(self):
-        fig, axs = plt.subplots(3, 1, figsize=(10, 7))
+        fig, axs = plt.subplots(4, 1, figsize=(10, 7))
 
         axs[0].set_title("Losses", fontsize=22)
         axs[0].set_xlabel("Steps", fontsize=16)
@@ -213,6 +215,10 @@ class Agent():
         axs[2].set_xlabel(f"Epoch", fontsize=16)
         axs[2].set_ylabel("Epsilon", fontsize=16)
         axs[2].plot(self.epsilons)
+        axs[3].set_title("Snake Size", fontsize=22)
+        axs[3].set_xlabel(f"Epoch", fontsize=16)
+        axs[3].set_ylabel("Size", fontsize=16)
+        axs[3].plot(self.snake_sizes)
 
     def save_plots(self, filepath):
         plt.tight_layout()
