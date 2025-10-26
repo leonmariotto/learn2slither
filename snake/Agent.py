@@ -27,6 +27,19 @@ EPSILON_INIT = 1.0
 EPSILON_MIN = 0.1
 
 class ReplayBuffer:
+    """
+    Used to store the replay buffer list.
+    self.buffer is a ring buffer, if full the last entry is pop
+    when a new entry is append.
+
+    Replay duffer data entry contain:
+        - state: current state before action
+        - action: the action chosen by model or picked random (with respect to epsilon)
+        - reward: obtained reward following the chosen action
+        - next_state: new state after action.
+        - done: boolean, used to know if new state have to be taken into account. (if snake is dead there is
+            no need to take new state into account)
+    """
     def __init__(self, capacity):
         self.buffer = collections.deque(maxlen=capacity)
 
@@ -34,6 +47,9 @@ class ReplayBuffer:
         self.buffer.append((state, action, reward, next_state, done))
 
     def sample(self, batch_size):
+        """
+        Get a batch_size sample of replay entry.
+        """
         return random.sample(self.buffer, batch_size)
 
     def __len__(self):
@@ -41,6 +57,9 @@ class ReplayBuffer:
 
 
 class Agent():
+    """
+    A RL agent that play snake.
+    """
     # Say that 300 step is an epoch
     # 300 step is sufficient to reach a 10-case long snake.
     STEP_PER_EPOCHS = 300
