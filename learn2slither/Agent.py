@@ -198,23 +198,25 @@ class Agent():
                 self.target_model.load_state_dict(self.model.state_dict())
             snake.reset()
 
-    def plot_losses(self):
-        plt.figure(figsize=(10,7))
-        plt.xlabel("Steps", fontsize=22)
-        plt.ylabel("Loss", fontsize=22)
-        plt.plot(self.losses)
+    def plot_metrics(self):
+        fig, axs = plt.subplots(3, 1, figsize=(10, 7))
 
-    def plot_rewards(self):
-        plt.figure(figsize=(10,7))
-        plt.xlabel(f"Epoch ({self.STEP_PER_EPOCHS} steps)", fontsize=22)
-        plt.ylabel("Reward", fontsize=22)
-        plt.plot(self.cumuled_rewards)
+        axs[0].set_title("Losses", fontsize=22)
+        axs[0].set_xlabel("Steps", fontsize=16)
+        axs[0].set_ylabel("Loss", fontsize=16)
+        axs[0].plot(self.losses)
+        axs[1].set_title("Rewards", fontsize=22)
+        axs[1].set_xlabel(f"Epoch ({self.STEP_PER_EPOCHS} steps)", fontsize=16)
+        axs[1].set_ylabel("Reward", fontsize=16)
+        axs[1].plot(self.cumuled_rewards)
+        axs[2].set_title("Epsilon", fontsize=22)
+        axs[2].set_xlabel(f"Epoch", fontsize=16)
+        axs[2].set_ylabel("Epsilon", fontsize=16)
+        axs[2].plot(self.epsilons)
 
-    def plot_epsilons(self):
-        plt.figure(figsize=(10,7))
-        plt.xlabel(f"Epoch", fontsize=22)
-        plt.ylabel("Epsilon", fontsize=22)
-        plt.plot(self.epsilons)
+    def save_plots(self, filepath):
+        plt.tight_layout()
+        plt.savefig(filepath, dpi=300, bbox_inches="tight")
 
     def show(self):
         plt.show()

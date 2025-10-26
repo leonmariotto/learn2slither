@@ -48,6 +48,21 @@ def play_with_agent(agent):
     help="Filepath to input weigth file.",
 )
 @click.option(
+    "--metrics_path",
+    "-m",
+    type=str,
+    default="",
+    help="Filepath to output metrics.",
+)
+@click.option(
+    "--display_metrics",
+    "-d",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Play with the agent, display it.",
+)
+@click.option(
     "--play",
     is_flag=True,
     default=False,
@@ -58,6 +73,8 @@ def run_agent(
     time_limit: int,
     out_weight: str,
     in_weight: str,
+    metrics_path:str,
+    display_metrics: bool,
     play: bool
 ):
     agent = Agent()
@@ -75,10 +92,11 @@ def run_agent(
             agent.export_weight(out_weight)
         print(f"Final epsilon = {agent.epsilon}")
         print(f"Epoch numbers = {agent.epoch_counter}")
-        agent.plot_losses()
-        agent.plot_rewards()
-        agent.plot_epsilons()
-        agent.show()
+        agent.plot_metrics()
+        if metrics_path != "":
+            agent.save_plots(metrics_path)
+        if display_metrics is True:
+            agent.show()
 
 if __name__ == "__main__":
     run_agent()
