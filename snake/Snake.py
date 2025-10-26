@@ -14,11 +14,6 @@ GRID_WIDTH, GRID_HEIGHT = 10, 10
 CELL_SIZE = 25
 SCREEN_WIDTH, SCREEN_HEIGHT = CELL_SIZE * GRID_WIDTH, CELL_SIZE * GRID_HEIGHT
 
-DEATH_REWARD = -100 / 100
-RED_APPLE_REWARD = -5 / 100
-GREEN_APPLE_REWARD = +80 / 100
-NOTHING_HAPPEN_REWARD = -1 / 100
-
 # Colors
 COLORS = {
     "background": (30, 30, 30),
@@ -43,6 +38,11 @@ class Snake():
     A snake game. Provide functions to get the following game info :
         - 
     """
+    DEATH_REWARD = -100 / 100
+    RED_APPLE_REWARD = -10 / 100
+    GREEN_APPLE_REWARD = +100 / 100
+    NOTHING_HAPPEN_REWARD = -1 / 100
+
     def __init__(self, render:bool=False):
         # --- Initialize pygame ---
         self.render = render
@@ -170,13 +170,13 @@ class Snake():
         new_head = (head_x + self.direction[0], head_y + self.direction[1])
 
         # Default reward
-        self.reward = NOTHING_HAPPEN_REWARD
+        self.reward = Snake.NOTHING_HAPPEN_REWARD
 
         # Check bounds
         if (not (0 <= new_head[0] < GRID_WIDTH and 0 <= new_head[1] < GRID_HEIGHT)) or new_head in self.snake:
             # LOOSE
             self.reset()
-            self.reward = DEATH_REWARD
+            self.reward = Snake.DEATH_REWARD
             return 
 
         # Move snake
@@ -184,12 +184,12 @@ class Snake():
         self.snake.insert(0, new_head)
         for i,apple in enumerate(self.red_apple):
             if new_head == apple :
-                self.reward = RED_APPLE_REWARD
+                self.reward = Snake.RED_APPLE_REWARD
                 self.red_apple[i] = self.get_free_case()
                 self.snake.pop()
         for i,apple in enumerate(self.green_apple):
             if new_head == apple :
-                self.reward = GREEN_APPLE_REWARD
+                self.reward = Snake.GREEN_APPLE_REWARD
                 self.green_apple[i] = self.get_free_case()
                 increase_snake = True
 
@@ -199,7 +199,7 @@ class Snake():
         if (len(self.snake) == 0):
             # LOOSE
             self.reset()
-            self.reward = DEATH_REWARD
+            self.reward = Snake.DEATH_REWARD
             return 
 
     def set_direction(self, direction:str):

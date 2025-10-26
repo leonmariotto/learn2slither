@@ -24,8 +24,7 @@ ACTION_SET = {
 }
 
 EPSILON_INIT = 1.0
-EPSILON_MIN = 0.05
-
+EPSILON_MIN = 0.1
 
 class ReplayBuffer:
     def __init__(self, capacity):
@@ -45,9 +44,9 @@ class Agent():
     # Say that 300 step is an epoch
     # 300 step is sufficient to reach a 10-case long snake.
     STEP_PER_EPOCHS = 300
-    REPLAY_BUFFER_SIZE = 10000
-    BATCH_SIZE = 64
-    TARGET_UPDATE_FREQUENCY = 10 # in epochs
+    REPLAY_BUFFER_SIZE = 6000
+    BATCH_SIZE = 600
+    TARGET_UPDATE_FREQUENCY = 3 # in epochs
 
     def __init__(self):
         self.model = torch.nn.Sequential(
@@ -103,7 +102,10 @@ class Agent():
         self.epoch_cumuled_reward += reward
         state2_ = np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
         state2 = torch.from_numpy(state2_).float()
-        done = reward == -100  # Assuming DEATH_REWARD is -100
+        # Because we take into account next states, the "done" state is special, as there is no
+        # next state to take into account.
+        # The "done_batch" value is used to transform to 0 the GAMMA part.
+        done = reward == Snake.DEATH_REWARD  # Assuming DEATH_REWARD is -100
         self.replay_buffer.add(state, action_, reward, state2, done)
 
         if len(self.replay_buffer) > self.BATCH_SIZE:
@@ -119,7 +121,6 @@ class Agent():
             Q_values = self.model(state_batch)
             with torch.no_grad():
                 next_Q_values = self.target_model(next_state_batch)
-
             Q_target = reward_batch + GAMMA * torch.max(next_Q_values, dim=1).values * (1 - done_batch)
 
             loss = self.loss_fn(Q_values.gather(1, action_batch.long().unsqueeze(1)).squeeze(), Q_target)
