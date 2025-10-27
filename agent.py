@@ -4,6 +4,8 @@ import time
 
 from learn2slither.Snake import Snake
 from learn2slither.Agent import Agent
+from learn2slither.MetaParameters import MetaParameters
+from learn2slither.YamlParser import YamlParser
 import click
 
 FPS = 60
@@ -48,6 +50,13 @@ def play_with_agent(agent):
     help="Filepath to input weigth file.",
 )
 @click.option(
+    "--meta_parameters_path",
+    "-mp",
+    type=str,
+    default="meta/v3.yml",
+    help="Filepath to meta parameters (yaml file).",
+)
+@click.option(
     "--metrics_path",
     "-m",
     type=str,
@@ -73,11 +82,15 @@ def run_agent(
     time_limit: int,
     out_weight: str,
     in_weight: str,
+    meta_parameters_path:str,
     metrics_path:str,
     display_metrics: bool,
     play: bool
 ):
-    agent = Agent()
+    yaml_parser = YamlParser()
+    yaml_parser.parse(meta_parameters_path)
+    meta_parameters = MetaParameters(**yaml_parser.data)
+    agent = Agent(meta_parameters)
     if in_weight != "":
         agent.import_weight(in_weight)
 
