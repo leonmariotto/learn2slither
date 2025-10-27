@@ -4,46 +4,16 @@ Agent. Implement Deep Q network to learn playing snake.
 
 import torch
 from .Snake import Snake
+from .MetaParameters import MetaParameters
 import numpy as np
 import random
 from matplotlib import pyplot as plt
 import collections
 
-
 NN_L1 = 24
 NN_L2 = 150
 NN_L3 = 100
 NN_L4 = 4
-
-# The gradient tells you which way is downhill.
-# The learning rate tells you how big a step you take in that direction.
-# If your steps are too big you stumble around, if too low you crawl forever.
-LEARNING_RATE = 1e-4
-
-# Gamma meta parameter is applied in Bellman equation, it's the future reward discount factor.
-# It determines how much future rewards matter compared to the current one.
-# The model have the ability to think with many-step plan in mind, as (γ * max(Q_target(S₄))) can propagate
-# to a 5 step away reward. But in this case the 5 step away reward will appear discounted by
-# GAMMA ^ 5 => 0.9 ^ 5 => 0.59
-# With a value of 0 only current reward matter, a value of 0.99 focus strongly on future rewards.
-GAMMA = 0.9
-
-# With a large replay buffer, rare transition (eating a green apple) are more used in training.
-# This add more stability to training.
-REPLAY_BUFFER_SIZE = 6000
-
-# Control how many experiences are sampled from the replay buffer for each update. A large value
-# means smoother gradient but slow updates (so slow the training process).
-BATCH_SIZE = 600
-
-# Say that 300 step is an epoch
-# 300 step is sufficient to reach a 10-case long snake.
-# Tis define the epsilon update frequency, metrics collecting frequency,
-# and is part of target update frequency.
-# Also currently there is a reset of the game every epoch... TODO is it necessary/authorized/usefull ?
-STEP_PER_EPOCHS = 300
-
-TARGET_UPDATE_FREQUENCY = 3 # in epochs
 
 ACTION_SET = {
     0: "UP",
@@ -51,13 +21,6 @@ ACTION_SET = {
     2: "LEFT",
     3: "DOWN",
 }
-
-EPSILON_INIT = 1.0
-EPSILON_MIN = 0.1
-# At each epoch epsilon is computed as: is new_epsilon = a * epsilon + b
-# But can't go under EPSILON_MIN.
-EPSILON_A = 0.99
-EPSILON_B = 0
 
 class ReplayBuffer:
     """
@@ -97,8 +60,10 @@ class Agent():
     Use Adam optimizer.
     Use replay buffer.
     Use a target network different from main network, with a defined synchronization rate.
+    Meta parameters comes from an external class at init.
     """
-    def __init__(self):
+    def __init__(self, meta_parameters: MetaParameters):
+        self.meta_parameters = meta_parameters
         # The main model is updated at each step.
         # The state is inputed to the model, a prediction of reward-action is outputed (Q-value)
         # so we can choose the highest reward-action of the Q-value.
@@ -125,12 +90,11 @@ class Agent():
         self.target_model.load_state_dict(self.model.state_dict())
         # Mean squared error.
         self.loss_fn = torch.nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=LEARNING_RATE)
-        self.replay_buffer = ReplayBuffer(REPLAY_BUFFER_SIZE)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.meta_parameters.learning_rate)
+        self.replay_buffer = ReplayBuffer(self.meta_parameters.replay_buffer_size)
         self.losses = []
         # Epsilon is used to slowly become deterministic.
-        # The EPSILON_INIT, EPSILON min and epsilon decreasing rate are meta-parameters.
-        self.epsilon = EPSILON_INIT
+        self.epsilon = self.meta_parameters.epsilon_init
         self.internal_step_counter = 0
         self.epoch_cumuled_reward = 0
         self.cumuled_rewards = []
@@ -139,6 +103,9 @@ class Agent():
         self.epoch_counter = 0
 
     def run_best_step(self, snake:Snake):
+        """
+        Do not learn, only play the best move predicted.
+        """
         state_ = np.array(snake.get_state()).astype(float) + np.random.rand(1,NN_L1)/100.0
         state = torch.from_numpy(state_).float()
         qval = self.model(state) #H
@@ -167,12 +134,12 @@ class Agent():
         state2 = torch.from_numpy(state2_).float()
         # Because we take into account next states, the "done" state is special, as there is no
         # next state to take into account.
-        # The "done_batch" value is used to transform to 0 the GAMMA part.
+        # The "done_batch" value is used to transform to 0 the "future rewards" part.
         done = reward == Snake.DEATH_REWARD
         self.replay_buffer.add(state, action_, reward, state2, done)
 
-        if len(self.replay_buffer) > BATCH_SIZE:
-            minibatch = self.replay_buffer.sample(BATCH_SIZE)
+        if len(self.replay_buffer) > self.meta_parameters.replay_buffer_batch_size:
+            minibatch = self.replay_buffer.sample(self.meta_parameters.replay_buffer_batch_size)
             state_batch, action_batch, reward_batch, next_state_batch, done_batch = zip(*minibatch)
 
             state_batch = torch.cat(state_batch)
@@ -185,7 +152,7 @@ class Agent():
             with torch.no_grad():
                 # Use target model to predict future Q values.
                 next_Q_values = self.target_model(next_state_batch)
-            Q_target = reward_batch + GAMMA * torch.max(next_Q_values, dim=1).values * (1 - done_batch)
+            Q_target = reward_batch + self.meta_parameters.gamma * torch.max(next_Q_values, dim=1).values * (1 - done_batch)
 
             loss = self.loss_fn(Q_values.gather(1, action_batch.long().unsqueeze(1)).squeeze(), Q_target)
             self.optimizer.zero_grad()
@@ -195,43 +162,45 @@ class Agent():
             # Once gradient are computed optimizer update weight, with respect to the learning weigth.
             self.optimizer.step()
 
-        if self.internal_step_counter > STEP_PER_EPOCHS:
+        if self.internal_step_counter > self.meta_parameters.step_per_epoch:
             self.snake_sizes += [len(snake.snake)]
             # Terminate an epoch and start another
             self.cumuled_rewards += [self.epoch_cumuled_reward]
             self.epoch_cumuled_reward = 0
             self.internal_step_counter = 0
             # self.epsilon = max(EPSILON_MIN, self.epsilon - 0.002)
-            self.epsilon = max(EPSILON_MIN, self.epsilon * EPSILON_A + EPSILON_B)
+            if self.epoch_counter % self.meta_parameters.epsilon_update_freq == 0:
+                self.epsilon = max(self.meta_parameters.epsilon_min, self.epsilon * \
+                            self.meta_parameters.epsilon_a + self.meta_parameters.epsilon_b)
             self.epsilons += [self.epsilon]
             self.epoch_counter += 1
-            if self.epoch_counter % TARGET_UPDATE_FREQUENCY == 0:
+            if self.epoch_counter % self.meta_parameters.target_model_update_freq == 0:
                 self.target_model.load_state_dict(self.model.state_dict())
-            snake.reset()
 
     def plot_metrics(self):
-        fig, axs = plt.subplots(4, 1, figsize=(10, 7))
+        fig, axs = plt.subplots(4, 1, figsize=(10, 18))
 
         axs[0].set_title("Losses", fontsize=22)
         axs[0].set_xlabel("Steps", fontsize=16)
         axs[0].set_ylabel("Loss", fontsize=16)
         axs[0].plot(self.losses)
         axs[1].set_title("Rewards", fontsize=22)
-        axs[1].set_xlabel(f"Epoch ({STEP_PER_EPOCHS} steps)", fontsize=16)
+        axs[1].set_xlabel("Epoch", fontsize=16)
         axs[1].set_ylabel("Reward", fontsize=16)
         axs[1].plot(self.cumuled_rewards)
         axs[2].set_title("Epsilon", fontsize=22)
-        axs[2].set_xlabel(f"Epoch", fontsize=16)
+        axs[2].set_xlabel("Epoch", fontsize=16)
         axs[2].set_ylabel("Epsilon", fontsize=16)
         axs[2].plot(self.epsilons)
         axs[3].set_title("Snake Size", fontsize=22)
-        axs[3].set_xlabel(f"Epoch", fontsize=16)
+        axs[3].set_xlabel("Epoch", fontsize=16)
         axs[3].set_ylabel("Size", fontsize=16)
         axs[3].plot(self.snake_sizes)
+        plt.tight_layout(pad=5.0)
 
     def save_plots(self, filepath):
-        plt.tight_layout()
-        plt.savefig(filepath, dpi=300, bbox_inches="tight")
+        #plt.savefig(filepath, dpi=300, bbox_inches="tight")
+        plt.savefig(filepath)
 
     def show(self):
         plt.show()

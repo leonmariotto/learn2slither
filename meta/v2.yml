@@ -1,0 +1,14 @@
+# As the batch size is big, the loss is very stable
+# So try to increase the learning rate.
+
+learning_rate: 1e-3
+gamma: 0.95
+replay_buffer_size: 6000
+replay_buffer_batch_size: 600
+step_per_epoch: 300
+target_model_update_freq: 3
+epsilon_update_freq: 1
+epsilon_init: 1.0
+epsilon_min: 0.1
+epsilon_a: 0.99
+epsilon_b: 0.00
