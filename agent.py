@@ -11,17 +11,18 @@ import click
 FPS = 60
 MOVE_PER_SECOND = 6
 
+
 def play_with_agent(agent):
     snake = Snake(render=True)
     last_render = time.perf_counter()
     last_move = time.perf_counter()
     while True:
         now = time.perf_counter()
-        if (now - last_move >= 1 / MOVE_PER_SECOND):
-            snake.poll_input() # catch window closure.
+        if now - last_move >= 1 / MOVE_PER_SECOND:
+            snake.poll_input()  # catch window closure.
             agent.run_best_step(snake)
             last_move = now
-        if (now - last_render >= 1 / 60):
+        if now - last_render >= 1 / 60:
             snake.draw()
             last_render = now
 
@@ -82,10 +83,10 @@ def run_agent(
     time_limit: int,
     out_weight: str,
     in_weight: str,
-    meta_parameters_path:str,
-    metrics_path:str,
+    meta_parameters_path: str,
+    metrics_path: str,
     display_metrics: bool,
-    play: bool
+    play: bool,
 ):
     yaml_parser = YamlParser()
     yaml_parser.parse(meta_parameters_path)
@@ -110,6 +111,7 @@ def run_agent(
             agent.save_plots(metrics_path)
         if display_metrics is True:
             agent.show()
+
 
 if __name__ == "__main__":
     run_agent()

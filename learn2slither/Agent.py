@@ -22,6 +22,7 @@ ACTION_SET = {
     3: "DOWN",
 }
 
+
 class ReplayBuffer:
     """
     Used to store the replay buffer list.
@@ -36,6 +37,7 @@ class ReplayBuffer:
         - done: boolean, used to know if future state have to be taken into account. (if snake is dead there is
             no need to take new state into account)
     """
+
     def __init__(self, capacity):
         self.buffer = collections.deque(maxlen=capacity)
 
@@ -52,7 +54,7 @@ class ReplayBuffer:
         return len(self.buffer)
 
 
-class Agent():
+class Agent:
     """
     A RL agent that play snake.
     Use a 2 layers sequential neural network with rectified linear unit as activation function.
@@ -62,6 +64,7 @@ class Agent():
     Use a target network different from main network, with a defined synchronization rate.
     Meta parameters comes from an external class at init.
     """
+
     def __init__(self, meta_parameters: MetaParameters):
         self.meta_parameters = meta_parameters
         # The main model is updated at each step.
@@ -72,7 +75,7 @@ class Agent():
             torch.nn.ReLU(),
             torch.nn.Linear(NN_L2, NN_L3),
             torch.nn.ReLU(),
-            torch.nn.Linear(NN_L3, NN_L4)
+            torch.nn.Linear(NN_L3, NN_L4),
         )
         # This model is updated at a defined synchonization rate (meta-parameter)
         # where it is synchronized to main network.
@@ -85,12 +88,14 @@ class Agent():
             torch.nn.ReLU(),
             torch.nn.Linear(NN_L2, NN_L3),
             torch.nn.ReLU(),
-            torch.nn.Linear(NN_L3, NN_L4)
+            torch.nn.Linear(NN_L3, NN_L4),
         )
         self.target_model.load_state_dict(self.model.state_dict())
         # Mean squared error.
         self.loss_fn = torch.nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.meta_parameters.learning_rate)
+        self.optimizer = torch.optim.Adam(
+            self.model.parameters(), lr=self.meta_parameters.learning_rate
+        )
         self.replay_buffer = ReplayBuffer(self.meta_parameters.replay_buffer_size)
         self.losses = []
         # Epsilon is used to slowly become deterministic.
@@ -102,35 +107,41 @@ class Agent():
         self.snake_sizes = []
         self.epoch_counter = 0
 
-    def run_best_step(self, snake:Snake):
+    def run_best_step(self, snake: Snake):
         """
         Do not learn, only play the best move predicted.
         """
-        state_ = np.array(snake.get_state()).astype(float) + np.random.rand(1,NN_L1)/100.0
+        state_ = (
+            np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
+        )
         state = torch.from_numpy(state_).float()
-        qval = self.model(state) #H
+        qval = self.model(state)  # H
         qval_ = qval.data.numpy()
         action_ = np.argmax(qval_)
-        action = ACTION_SET[int(action_)] #J
+        action = ACTION_SET[int(action_)]  # J
         snake.set_direction(action)
         snake.move()
 
-    def run_step(self, snake:Snake):
+    def run_step(self, snake: Snake):
         self.internal_step_counter += 1
-        state_ = np.array(snake.get_state()).astype(float) + np.random.rand(1,NN_L1)/100.0
+        state_ = (
+            np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
+        )
         state = torch.from_numpy(state_).float()
-        qval = self.model(state) #H
+        qval = self.model(state)  # H
         qval_ = qval.data.numpy()
-        if (random.random() < self.epsilon): #I
-            action_ = np.random.randint(0,4)
+        if random.random() < self.epsilon:  # I
+            action_ = np.random.randint(0, 4)
         else:
             action_ = np.argmax(qval_)
-        action = ACTION_SET[int(action_)] #J
+        action = ACTION_SET[int(action_)]  # J
         snake.set_direction(action)
         snake.move()
         reward = snake.get_reward()
         self.epoch_cumuled_reward += reward
-        state2_ = np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
+        state2_ = (
+            np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
+        )
         state2 = torch.from_numpy(state2_).float()
         # Because we take into account next states, the "done" state is special, as there is no
         # next state to take into account.
@@ -139,8 +150,12 @@ class Agent():
         self.replay_buffer.add(state, action_, reward, state2, done)
 
         if len(self.replay_buffer) > self.meta_parameters.replay_buffer_batch_size:
-            minibatch = self.replay_buffer.sample(self.meta_parameters.replay_buffer_batch_size)
-            state_batch, action_batch, reward_batch, next_state_batch, done_batch = zip(*minibatch)
+            minibatch = self.replay_buffer.sample(
+                self.meta_parameters.replay_buffer_batch_size
+            )
+            state_batch, action_batch, reward_batch, next_state_batch, done_batch = zip(
+                *minibatch
+            )
 
             state_batch = torch.cat(state_batch)
             action_batch = torch.Tensor(action_batch)
@@ -152,9 +167,13 @@ class Agent():
             with torch.no_grad():
                 # Use target model to predict future Q values.
                 next_Q_values = self.target_model(next_state_batch)
-            Q_target = reward_batch + self.meta_parameters.gamma * torch.max(next_Q_values, dim=1).values * (1 - done_batch)
+            Q_target = reward_batch + self.meta_parameters.gamma * torch.max(
+                next_Q_values, dim=1
+            ).values * (1 - done_batch)
 
-            loss = self.loss_fn(Q_values.gather(1, action_batch.long().unsqueeze(1)).squeeze(), Q_target)
+            loss = self.loss_fn(
+                Q_values.gather(1, action_batch.long().unsqueeze(1)).squeeze(), Q_target
+            )
             self.optimizer.zero_grad()
             # Perform backpropagation on every gradient of every neuron in every layer of neural network.
             loss.backward()
@@ -170,8 +189,11 @@ class Agent():
             self.internal_step_counter = 0
             # self.epsilon = max(EPSILON_MIN, self.epsilon - 0.002)
             if self.epoch_counter % self.meta_parameters.epsilon_update_freq == 0:
-                self.epsilon = max(self.meta_parameters.epsilon_min, self.epsilon * \
-                            self.meta_parameters.epsilon_a + self.meta_parameters.epsilon_b)
+                self.epsilon = max(
+                    self.meta_parameters.epsilon_min,
+                    self.epsilon * self.meta_parameters.epsilon_a
+                    + self.meta_parameters.epsilon_b,
+                )
             self.epsilons += [self.epsilon]
             self.epoch_counter += 1
             if self.epoch_counter % self.meta_parameters.target_model_update_freq == 0:
@@ -199,22 +221,19 @@ class Agent():
         plt.tight_layout(pad=5.0)
 
     def save_plots(self, filepath):
-        #plt.savefig(filepath, dpi=300, bbox_inches="tight")
+        # plt.savefig(filepath, dpi=300, bbox_inches="tight")
         plt.savefig(filepath)
 
     def show(self):
         plt.show()
 
-    def export_weight(self, filepath:str):
+    def export_weight(self, filepath: str):
         torch.save(self.model.state_dict(), filepath)
 
-    def import_weight(self, filepath:str):
+    def import_weight(self, filepath: str):
         """
         Import weigth from a file.
         Model must match the nn architecture.
         """
         self.model.load_state_dict(torch.load(filepath))
         self.target_model.load_state_dict(torch.load(filepath))
-
-
-

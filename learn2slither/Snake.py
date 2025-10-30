@@ -20,10 +20,11 @@ COLORS = {
     "snake": (0, 0, 200),
     "red_apple": (200, 0, 0),
     "green_apple": (0, 200, 0),
-    "grid": (40, 40, 40)
+    "grid": (40, 40, 40),
 }
 
-DIR_NAME = {(0,-1):"UP",(0,1):"DOWN",(-1,0):"LEFT",(1,0):"RIGHT"}
+DIR_NAME = {(0, -1): "UP", (0, 1): "DOWN", (-1, 0): "LEFT", (1, 0): "RIGHT"}
+
 
 class SnakeStates(IntEnum):
     HEAD = 0
@@ -33,17 +34,19 @@ class SnakeStates(IntEnum):
     NOTHING = 4
     WALL = 5
 
-class Snake():
+
+class Snake:
     """
     A snake game. Provide functions to get the following game info :
-        - 
+        -
     """
+
     DEATH_REWARD = -1000 / 1000
     RED_APPLE_REWARD = -500 / 1000
     GREEN_APPLE_REWARD = +500 / 1000
     NOTHING_HAPPEN_REWARD = -5 / 1000
 
-    def __init__(self, render:bool=False):
+    def __init__(self, render: bool = False):
         # --- Initialize pygame ---
         self.render = render
         if self.render is True:
@@ -75,7 +78,7 @@ class Snake():
     def draw_grid(self):
         """Draw subtle grid lines."""
         if self.render is False:
-            raise ValueError();
+            raise ValueError()
         for x in range(0, SCREEN_WIDTH, CELL_SIZE):
             pygame.draw.line(self.screen, COLORS["grid"], (x, 0), (x, SCREEN_HEIGHT))
         for y in range(0, SCREEN_HEIGHT, CELL_SIZE):
@@ -83,7 +86,7 @@ class Snake():
 
     # Create directional head textures dynamically
     @staticmethod
-    def make_head_texture(direction, color=(0,0,200)):
+    def make_head_texture(direction, color=(0, 0, 200)):
         surf = pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
         c = CELL_SIZE // 2
         if direction == "UP":
@@ -101,35 +104,45 @@ class Snake():
 
     def draw_snake(self):
         if self.render is False:
-            raise ValueError();
-        for i,(x,y) in enumerate(self.snake):
-            rect = pygame.Rect(x*CELL_SIZE, y*CELL_SIZE, CELL_SIZE, CELL_SIZE)
+            raise ValueError()
+        for i, (x, y) in enumerate(self.snake):
+            rect = pygame.Rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
             if i == 0:
                 dir_name = DIR_NAME[self.direction]
                 self.screen.blit(self.head_textures[dir_name], rect.topleft)
-            elif i == len(self.snake)-1:
-                pygame.draw.rect(self.screen, (0,0,150), rect, border_radius=10)
+            elif i == len(self.snake) - 1:
+                pygame.draw.rect(self.screen, (0, 0, 150), rect, border_radius=10)
             else:
-                pygame.draw.rect(self.screen, (0,0,180), rect, border_radius=4)
-                pygame.draw.rect(self.screen, (0,0,100), rect, width=2, border_radius=4)
+                pygame.draw.rect(self.screen, (0, 0, 180), rect, border_radius=4)
+                pygame.draw.rect(
+                    self.screen, (0, 0, 100), rect, width=2, border_radius=4
+                )
 
     def draw(self):
         if self.render is False:
-            raise ValueError();
+            raise ValueError()
         """Draw the entire board based on known cell states."""
         self.screen.fill(COLORS["background"])
         self.draw_grid()
         self.draw_snake()
-    
+
         # Draw snake
-        #for (x, y) in self.snake:
+        # for (x, y) in self.snake:
         #    pygame.draw.rect(self.screen, COLORS["snake"], (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-    
+
         # Draw apple
-        for i,(x,y) in enumerate(self.red_apple):
-            pygame.draw.rect(self.screen, COLORS["red_apple"], (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-        for i,(x,y) in enumerate(self.green_apple):
-            pygame.draw.rect(self.screen, COLORS["green_apple"], (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+        for i, (x, y) in enumerate(self.red_apple):
+            pygame.draw.rect(
+                self.screen,
+                COLORS["red_apple"],
+                (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE),
+            )
+        for i, (x, y) in enumerate(self.green_apple):
+            pygame.draw.rect(
+                self.screen,
+                COLORS["green_apple"],
+                (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE),
+            )
         pygame.display.flip()
 
     def poll_input(self):
@@ -139,12 +152,12 @@ class Snake():
         when no UI is present.
         """
         if self.render is False:
-            raise ValueError();
+            raise ValueError()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            
+
             # Direction control
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP and self.direction != (0, 1):
@@ -163,7 +176,6 @@ class Snake():
             c = (random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1))
         return c
 
-
     def move(self):
         # Update snake
         head_x, head_y = self.snake[0]
@@ -173,22 +185,24 @@ class Snake():
         self.reward = Snake.NOTHING_HAPPEN_REWARD
 
         # Check bounds
-        if (not (0 <= new_head[0] < GRID_WIDTH and 0 <= new_head[1] < GRID_HEIGHT)) or new_head in self.snake:
+        if (
+            not (0 <= new_head[0] < GRID_WIDTH and 0 <= new_head[1] < GRID_HEIGHT)
+        ) or new_head in self.snake:
             # LOOSE
             self.reset()
             self.reward = Snake.DEATH_REWARD
-            return 
+            return
 
         # Move snake
         increase_snake = False
         self.snake.insert(0, new_head)
-        for i,apple in enumerate(self.red_apple):
-            if new_head == apple :
+        for i, apple in enumerate(self.red_apple):
+            if new_head == apple:
                 self.reward = Snake.RED_APPLE_REWARD
                 self.red_apple[i] = self.get_free_case()
                 self.snake.pop()
-        for i,apple in enumerate(self.green_apple):
-            if new_head == apple :
+        for i, apple in enumerate(self.green_apple):
+            if new_head == apple:
                 self.reward = Snake.GREEN_APPLE_REWARD
                 self.green_apple[i] = self.get_free_case()
                 increase_snake = True
@@ -196,13 +210,13 @@ class Snake():
         if increase_snake is False:
             self.snake.pop()
 
-        if (len(self.snake) == 0):
+        if len(self.snake) == 0:
             # LOOSE
             self.reset()
             self.reward = Snake.DEATH_REWARD
-            return 
+            return
 
-    def set_direction(self, direction:str):
+    def set_direction(self, direction: str):
         if direction == "UP" and self.direction != (0, 1):
             self.direction = (0, -1)
         elif direction == "DOWN" and self.direction != (0, -1):
@@ -245,8 +259,6 @@ class Snake():
                 out += [SnakeStates.NOTHING]
         out += [SnakeStates.WALL]
         return out
-
-
 
     def get_reward(self):
         """
