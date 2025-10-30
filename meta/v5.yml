@@ -9,5 +9,5 @@ target_model_update_freq: 10
 epsilon_update_freq: 10
 epsilon_init: 1.0
 epsilon_min: 0.2
-epsilon_a: 0.995
-epsilon_b: -0.001
+epsilon_a: 0.99
+epsilon_b: -0.01
