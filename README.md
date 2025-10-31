@@ -57,12 +57,15 @@ TODO
 TODO
 
 - v5 model is the current best.
-- Model meta parameters is passed through yaml, allowing easy experimentation. TODO this is training parameters...
+- Model meta parameters is passed through yaml, allowing easy experimentation.
 
 ## TODO List
 
 - Calculate epsilon depending on training time
-- Document meta paramters and rational value choices
+- Document meta paramters and rational value choices, this is training parameter, not run-time meta-parameters...
 - Add a documentation about DQN and the features of DQN here: target network, replay buffer, ...
 - Save loss only once per epoch to optimize a little
 - Export metrics to a json file, to easily compare run and run test.
+- Try convolutional neural network for DQN
+- Make the neural network shape parametrizable, test some shape and rational them.
+- Train with graphic card, how to ?
