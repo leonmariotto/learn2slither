@@ -27,6 +27,35 @@ The `-t` option specify the time of training (in second, so 10mn in this case).
 ## Model
 
 - This is a Deep Q Network
+
+The model take the state of Snake in input and output a Q value prediction of action-rewards.</br>
+There is an internal node layer which take a vector of dimension 150 and ouput a vector of 
+dimension 100.
+```
+NN_L1 = 24
+NN_L2 = 150
+NN_L3 = 100
+NN_L4 = 4
+self.model = torch.nn.Sequential(
+    torch.nn.Linear(NN_L1, NN_L2),
+    torch.nn.ReLU(),
+    torch.nn.Linear(NN_L2, NN_L3),
+    torch.nn.ReLU(),
+    torch.nn.Linear(NN_L3, NN_L4),
+)
+```
+
+### Replay buffer
+TODO
+### Target model
+TODO
+### Optimizer
+TODO
+### Epsilon Greedy
+TODO
+### Loss function
+TODO
+
 - v5 model is the current best.
 - Model meta parameters is passed through yaml, allowing easy experimentation. TODO this is training parameters...
 
