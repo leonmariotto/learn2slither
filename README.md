@@ -55,9 +55,7 @@ Type of layer :
 - GCN/GAT: used for graphs/network, learn from node-edge relationship.
 
 How to choose ?
-- start simple (1-3 hidden layer, 32-256 neurons per layer)
 - match data type to layer type.
-- use ReLU by default
 - if underfitting (model can't capture data complexity, training and validation loss stay high), increase
 model width and model depth.
 - if overfitting (model is memorizing training data, training loss is ok but validation loss stay
@@ -110,18 +108,14 @@ epsilon_init, epsilon_min, epsilon_a and epsilon_b are parts of meta-parameters.
 
 ## Some papers
 
-- Humanlevel control through deep reinforcement learning (Google Deepmind)
+- Human level control through deep reinforcement learning (Google Deepmind)
 - Neural fitted Qiteration (2005)
 - Deep autoencoder NN in RL (2010)
 
 ## TODO List
 
-- deep autoencoder nn’s to to obtain low dimensional feature space by extracting representative features from states
 - Calculate epsilon depending on training time
-- Document meta paramters and rational value choices, this is training parameter, not run-time meta-parameters...
-- Add a documentation about DQN and the features of DQN here: target network, replay buffer, ...
-- Save loss only once per epoch to optimize a little
-- Export metrics to a json file, to easily compare run and run test.
 - Try convolutional neural network for DQN
 - Make the neural network shape parametrizable, test some shape and rational them.
 - Train with graphic card, how to ?
+- export json file for metrics, to easily compare training/validation.
