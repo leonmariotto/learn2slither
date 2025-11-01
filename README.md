@@ -1,21 +1,34 @@
 # Learn2Slither
 
-## HowTo
+Reinforcement learning project implementing a Deep Q Network to beat
+a snake game.
+
+## Usage
+
+Run `uv run agent.py --help` for a list of available option.
+If you want to play snake just run `uv run play_snake.py`.
+
+### Install
 
 Use uv to pull necessary packages.
 ```
 uv sync
 ```
-Run trained model.
+
+### Run trained model
+
+There is a mode to see to agent playing, option `--play`:
 ```
-uv run agent.py -mp meta/v5.yml -i models/v5.weight --play
+uv run agent.py -i models/v5.weight --play
+```
+There is a mode to evaluate an agent, option `--validate`,
+it produce graph that we can use to see the efficiency :
+```
+uv run agent.py -i models/v5.weight --validate -d
 ```
 
-If you want to play snake just run `uv run play_snake.py`.
+### Training
 
-## Training
-
-Run `uv run agent.py --help` for a list of available option.
 A model can be loaded using `-i` option, the trained model can be output
 using `-o` option.
 To re-train a model one can use :
@@ -23,8 +36,12 @@ To re-train a model one can use :
 uv run agent.py -i v1.weight -o v1.weight -t 600
 ```
 The `-t` option specify the time of training (in second, so 10mn in this case).
+The `-mp` option is used to set meta-parameters through yaml file.
+```
+uv run agent.py -i v5.weight -o v5.weight -mp meta/v5.yml -t 600
+```
 
-## Model
+## How it work ?
 
 This is a Deep Q Network. 
 The model take the state of Snake in input and output a Q value prediction of action-rewards.
@@ -115,7 +132,5 @@ epsilon_init, epsilon_min, epsilon_a and epsilon_b are parts of meta-parameters.
 ## TODO List
 
 - Calculate epsilon depending on training time
-- Try convolutional neural network for DQN
-- Make the neural network shape parametrizable, test some shape and rational them.
 - Train with graphic card, how to ?
 - export json file for metrics, to easily compare training/validation.
