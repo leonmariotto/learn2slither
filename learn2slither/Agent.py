@@ -21,6 +21,8 @@ ACTION_SET = {
     2: "LEFT",
     3: "DOWN",
 }
+VALIDATION_EPSILON = 0.0005
+VALIDATION_RESET_FREQUENCY = 200
 
 
 class ReplayBuffer:
@@ -118,18 +120,32 @@ class Agent:
     def run_best_step(self, snake: Snake):
         """
         Do not learn, only play the best move predicted.
-        TODO need to observe the loss here, in case we're underfitting the model.
         """
+        self.internal_step_counter += 1
         state_ = (
             np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
         )
         state = torch.from_numpy(state_).float()
         qval = self.model(state)  # H
         qval_ = qval.data.numpy()
-        action_ = np.argmax(qval_)
+        if random.random() < VALIDATION_EPSILON:  # I
+            action_ = np.random.randint(0, 4)
+        else:
+            action_ = np.argmax(qval_)
         action = ACTION_SET[int(action_)]  # J
         snake.set_direction(action)
         snake.move()
+        reward = snake.get_reward()
+        self.epoch_cumuled_reward += reward
+        if self.internal_step_counter > self.meta_parameters.step_per_epoch:
+            self.snake_sizes += [len(snake.snake)]
+            # Terminate an epoch and start another
+            self.cumuled_rewards += [self.epoch_cumuled_reward]
+            self.epoch_cumuled_reward = 0
+            self.internal_step_counter = 0
+            self.epoch_counter += 1
+            if self.epoch_counter % VALIDATION_RESET_FREQUENCY:
+                snake.reset()
 
     def run_step(self, snake: Snake):
         """
@@ -212,9 +228,9 @@ class Agent:
             if self.epoch_counter % self.meta_parameters.target_model_update_freq == 0:
                 self.target_model.load_state_dict(self.model.state_dict())
 
-    def plot_metrics(self):
+    def plot_training_metrics(self):
         """
-        Prepare model metrics.
+        Prepare training metrics.
         """
         fig, axs = plt.subplots(4, 1, figsize=(10, 18))
         axs[0].set_title("Losses", fontsize=22)
@@ -233,6 +249,21 @@ class Agent:
         axs[3].set_xlabel("Epoch", fontsize=16)
         axs[3].set_ylabel("Size", fontsize=16)
         axs[3].plot(self.snake_sizes)
+        plt.tight_layout(pad=5.0)
+
+    def plot_validation_metrics(self):
+        """
+        Prepare validation metrics.
+        """
+        fig, axs = plt.subplots(2, 1, figsize=(10, 18))
+        axs[0].set_title("Rewards", fontsize=22)
+        axs[0].set_xlabel("Epoch", fontsize=16)
+        axs[0].set_ylabel("Reward", fontsize=16)
+        axs[0].plot(self.cumuled_rewards)
+        axs[1].set_title("Snake Size", fontsize=22)
+        axs[1].set_xlabel("Epoch", fontsize=16)
+        axs[1].set_ylabel("Size", fontsize=16)
+        axs[1].plot(self.snake_sizes)
         plt.tight_layout(pad=5.0)
 
     def save_plots(self, filepath):

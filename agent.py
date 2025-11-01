@@ -73,6 +73,15 @@ def play_with_agent(agent):
     help="Play with the agent, display it.",
 )
 @click.option(
+    "--validate",
+    "-v",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Validate the model, do not train it. Use this option along with -d or -m to see"
+    " validation metrics.",
+)
+@click.option(
     "--play",
     is_flag=True,
     default=False,
@@ -86,6 +95,7 @@ def run_agent(
     meta_parameters_path: str,
     metrics_path: str,
     display_metrics: bool,
+    validate: bool,
     play: bool,
 ):
     yaml_parser = YamlParser()
@@ -94,23 +104,26 @@ def run_agent(
     agent = Agent(meta_parameters)
     if in_weight != "":
         agent.import_weight(in_weight)
-
     if play:
         play_with_agent(agent)
-    else:
-        snake = Snake(render=False)
-        start = time.perf_counter()
-        while time.perf_counter() - start < time_limit:
+        return
+    snake = Snake(render=False)
+    start = time.perf_counter()
+    while time.perf_counter() - start < time_limit:
+        if validate:
+            agent.run_best_step(snake)
+        else:
             agent.run_step(snake)
-        if out_weight != "":
-            agent.export_weight(out_weight)
-        print(f"Final epsilon = {agent.epsilon}")
-        print(f"Epoch numbers = {agent.epoch_counter}")
-        agent.plot_metrics()
-        if metrics_path != "":
-            agent.save_plots(metrics_path)
-        if display_metrics is True:
-            agent.show()
+    if out_weight != "":
+        agent.export_weight(out_weight)
+    if validate:
+        agent.plot_validation_metrics()
+    else:
+        agent.plot_training_metrics()
+    if metrics_path != "":
+        agent.save_plots(metrics_path)
+    if display_metrics is True:
+        agent.show()
 
 
 if __name__ == "__main__":
