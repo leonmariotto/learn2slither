@@ -66,12 +66,12 @@ high), decrease model width and model depth.
 ### Backpropagation
 
 It is how pytorch compute automatically gradients of all parameters.
-1 - forward pass : an input is passed to the model : output = model(input) 
-2 - compute the loss, the loss function measure how wrong model's predictions are compared to
-    the true target value. Typical functions are mean sqared error for regression task, and
-    cross entropy loop for classification task.
-3 - backward pass : for each parameters compute partial derivative of the loss
-4 - store gradient.
+- 1. forward pass : an input is passed to the model : output = model(input) 
+- 2. compute the loss, the loss function measure how wrong model's predictions are compared to
+the true target value. Typical functions are mean sqared error for regression task, and
+cross entropy loop for classification task.
+- 3. backward pass : for each parameters compute partial derivative of the loss
+- 4. store gradient.
 
 ### Optimizer (parameters update)
 
