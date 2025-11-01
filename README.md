@@ -75,22 +75,21 @@ cross entropy loop for classification task.
 
 ### Optimizer (parameters update)
 
+Use Adam optimizer.
 Once gradient are computed, an optimizer update the parameters.
 - learning rate: meta parameters controling the way parameters are updated.
-    The gradient tells you which way is downhill. The learning rate tells you how big a step you take in that direction.
-    If your steps are too big you stumble around, if too low you crawl forever.
-Use Adam optimizer.
+    The gradient tells you which way is downhill. The learning rate tells you how big a step you take in that direction. If your steps are too big you stumble around, if too low you crawl forever.
 
 ### Replay buffer
 
 Instead of learning of the action just took, we learn of a random batch of a replay buffer list.
 This is used to prevent catastrophic forgeting.
-- replay_buffer_size: With a large replay buffer, rare transition (eating a green apple) are more used in training.
-This add more stability to training.
-- replay_buffer_batch_size control how many experiences are sampled from the replay buffer for each update. A large value
-means smoother gradient but slow updates (so slow the training process).
 Experience replay make the training task more like supervised learning.
 One can collect experience from human gameplay and train the model on these.
+- replay_buffer_size: With a large replay buffer, rare transition (eating a green apple) are more
+used in training. This add more stability to training.
+- replay_buffer_batch_size control how many experiences are sampled from the replay buffer for
+each update. A large value means smoother gradient but slow updates (so slow the training process).
 
 ### Target model
 
