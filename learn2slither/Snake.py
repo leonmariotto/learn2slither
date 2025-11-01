@@ -44,7 +44,7 @@ class Snake:
     DEATH_REWARD = -1000 / 1000
     RED_APPLE_REWARD = -500 / 1000
     GREEN_APPLE_REWARD = +500 / 1000
-    NOTHING_HAPPEN_REWARD = -5 / 1000
+    NOTHING_HAPPEN_REWARD = -20 / 1000
 
     def __init__(self, render: bool = False):
         # --- Initialize pygame ---
