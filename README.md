@@ -27,26 +27,7 @@ The `-t` option specify the time of training (in second, so 10mn in this case).
 ## Model
 
 This is a Deep Q Network. 
-The model take the state of Snake in input and output a Q value prediction of action-rewards.</br>
-- torch.nn.Sequential is a container that chain multiple neural network and functions.
-- torch.nn.ReLU is: Rectified Linear Unit function between each layer: f(x) = max(0,x).
-Without this stacking Linear layer would collapse into a single linear transformation (no learning power).
-linear + linear = linear, nn.ReLU break the linearity.
-- torch.nn.Linear is: Affine linear function: y = x @ W.T + b, where x is the input vector, W.T the weight matrix, and
-b a bias vector (@ is a matrix multiplication).
-```
-NN_L1 = 24
-NN_L2 = 150
-NN_L3 = 100
-NN_L4 = 4
-self.model = torch.nn.Sequential(
-    torch.nn.Linear(NN_L1, NN_L2),
-    torch.nn.ReLU(),
-    torch.nn.Linear(NN_L2, NN_L3),
-    torch.nn.ReLU(),
-    torch.nn.Linear(NN_L3, NN_L4),
-)
-```
+The model take the state of Snake in input and output a Q value prediction of action-rewards.
 
 ### Model Shape
 
@@ -59,12 +40,14 @@ Hidden layer size control model capacity, large model can learn more but can be 
 Typical architecture start with a wider first layer (150) for expanding representation, and gradually
 narrow down (compress toward output). This is called a "funnel" architecture.
 Number of hideen layer control the capacity to learn hierarchical feature.
+
 Activation functions :
 - ReLU: default for most, fast
 - LeakyReLU: use when many neuron dies (output 0).
 - Tanh: for centered data (-> 0 mean), slower to train, saturate.
 - Sigmoid: only for binary output, easily saturate.
 - Softmax: final layer for multi-class classification, convert logic into probabilities.
+
 Type of layer :
 - nn.Linear: for tabular data, simple relationship between numerical input.
 - nn.Conv2d: for picture data, capture local spatial pattern.

@@ -34,8 +34,8 @@ class ReplayBuffer:
         - action: the action chosen by model or picked random (with respect to epsilon)
         - reward: obtained reward following the chosen action
         - next_state: new state after action.
-        - done: boolean, used to know if future state have to be taken into account. (if snake is dead there is
-            no need to take new state into account)
+        - done: boolean, used to know if future state have to be taken into account. (if
+            snake is dead there is no need to take new state into account)
     """
 
     def __init__(self, capacity):
@@ -63,6 +63,14 @@ class Agent:
     Use replay buffer.
     Use a target network different from main network, with a defined synchronization rate.
     Meta parameters comes from an external class at init.
+
+    About torch :
+    - torch.nn.Sequential is a container that chain multiple neural network and functions.
+    - torch.nn.ReLU is: Rectified Linear Unit function between each layer: f(x) = max(0,x).
+        thout this stacking Linear layer would collapse into a single linear transformation
+        (no learning power). linear + linear = linear, nn.ReLU break the linearity.
+    - torch.nn.Linear is: Affine linear function: y = x @ W.T + b, where x is the input vector,
+        W.T the weight matrix, and b a bias vector (@ is a matrix multiplication).
     """
 
     def __init__(self, meta_parameters: MetaParameters):
@@ -110,6 +118,7 @@ class Agent:
     def run_best_step(self, snake: Snake):
         """
         Do not learn, only play the best move predicted.
+        TODO need to observe the loss here, in case we're underfitting the model.
         """
         state_ = (
             np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
@@ -123,6 +132,10 @@ class Agent:
         snake.move()
 
     def run_step(self, snake: Snake):
+        """
+        Run a step and learn from it.
+        Use replay buffer and target network.
+        """
         self.internal_step_counter += 1
         state_ = (
             np.array(snake.get_state()).astype(float) + np.random.rand(1, NN_L1) / 100.0
@@ -200,8 +213,10 @@ class Agent:
                 self.target_model.load_state_dict(self.model.state_dict())
 
     def plot_metrics(self):
+        """
+        Prepare model metrics.
+        """
         fig, axs = plt.subplots(4, 1, figsize=(10, 18))
-
         axs[0].set_title("Losses", fontsize=22)
         axs[0].set_xlabel("Steps", fontsize=16)
         axs[0].set_ylabel("Loss", fontsize=16)
@@ -221,13 +236,23 @@ class Agent:
         plt.tight_layout(pad=5.0)
 
     def save_plots(self, filepath):
-        # plt.savefig(filepath, dpi=300, bbox_inches="tight")
+        """
+        Save model metrics into filepath.
+        Should be called after plot_metrics.
+        """
         plt.savefig(filepath)
 
     def show(self):
+        """
+        Show model metrics.
+        Should be called after plot_metrics.
+        """
         plt.show()
 
     def export_weight(self, filepath: str):
+        """
+        Export model weight in filepath.
+        """
         torch.save(self.model.state_dict(), filepath)
 
     def import_weight(self, filepath: str):
