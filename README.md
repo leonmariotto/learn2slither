@@ -48,6 +48,38 @@ self.model = torch.nn.Sequential(
 )
 ```
 
+### Model Shape
+
+We have this :
+```
+Linear(24, 150) → ReLU → Linear(150, 100) → ReLU → Linear(100, 4)
+```
+24 (input) and 4 (output) are fixed.
+Hidden layer size control model capacity, large model can learn more but can be difficult to train.
+Typical architecture start with a wider first layer (150) for expanding representation, and gradually
+narrow down (compress toward output). This is called a "funnel" architecture.
+Number of hideen layer control the capacity to learn hierarchical feature.
+Activation functions :
+- ReLU: default for most, fast
+- LeakyReLU: use when many neuron dies (output 0).
+- Tanh: for centered data (-> 0 mean), slower to train, saturate.
+- Sigmoid: only for binary output, easily saturate.
+- Softmax: final layer for multi-class classification, convert logic into probabilities.
+Type of layer :
+- nn.Linear: for tabular data, simple relationship between numerical input.
+- nn.Conv2d: for picture data, capture local spatial pattern.
+- nn.LSTM, nn.GRU, nn.Transformer: for sequence (text, time), capture temporal and conceptual relationship.
+- GCN/GAT: used for graphs/network, learn from node-edge relationship.
+
+How to choose ?
+- start simple (1-3 hidden layer, 32-256 neurons per layer)
+- match data type to layer type.
+- use ReLU by default
+- if underfitting (model can't capture data complexity, training and validation loss stay high), increase
+model width and model depth.
+- if overfitting (model is memorizing training data, training loss is ok but validation loss stay
+high), decrease model width and model depth.
+
 ### Backpropagation
 
 It is how pytorch compute automatically gradients of all parameters.
